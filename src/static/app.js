@@ -326,10 +326,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return {
       facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`,
       whatsapp: `https://wa.me/?text=${encodedCombined}`,
-      x: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+      x: `https://x.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
       shareText,
       shareUrl,
     };
+  }
+
+  function escapeHtmlAttribute(value) {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
   }
 
   // Function to determine activity type (this would ideally come from backend)
@@ -527,8 +535,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
     const socialShareLinks = buildSocialShareLinks(name, details);
-    const encodedShareText = encodeURIComponent(socialShareLinks.shareText);
-    const encodedShareUrl = encodeURIComponent(socialShareLinks.shareUrl);
+    const escapedFacebookShareLink = escapeHtmlAttribute(
+      socialShareLinks.facebook
+    );
+    const escapedWhatsappShareLink = escapeHtmlAttribute(
+      socialShareLinks.whatsapp
+    );
+    const escapedXShareLink = escapeHtmlAttribute(socialShareLinks.x);
+    const escapedActivityName = escapeHtmlAttribute(name);
 
     // Create activity tag
     const tagHtml = `
@@ -563,38 +577,36 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="share-label">Share with friends:</span>
         <div class="share-buttons">
           <a
-            class="share-button"
-            href="${socialShareLinks.facebook}"
+            class="share-button share-facebook"
+            href="${escapedFacebookShareLink}"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Share ${name} on Facebook"
+            aria-label="Share ${escapedActivityName} on Facebook"
           >
             Facebook
           </a>
           <a
-            class="share-button"
-            href="${socialShareLinks.whatsapp}"
+            class="share-button share-whatsapp"
+            href="${escapedWhatsappShareLink}"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Share ${name} on WhatsApp"
+            aria-label="Share ${escapedActivityName} on WhatsApp"
           >
             WhatsApp
           </a>
           <a
-            class="share-button"
-            href="${socialShareLinks.x}"
+            class="share-button share-x"
+            href="${escapedXShareLink}"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Share ${name} on X"
+            aria-label="Share ${escapedActivityName} on X"
           >
             X
           </a>
           <button
             type="button"
             class="share-button copy-share-button"
-            data-share-url="${encodedShareUrl}"
-            data-share-text="${encodedShareText}"
-            aria-label="Copy share text and link for ${name}"
+            aria-label="Copy share text and link for ${escapedActivityName}"
           >
             Copy
           </button>
@@ -662,11 +674,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const copyShareButton = activityCard.querySelector(".copy-share-button");
     if (copyShareButton) {
       copyShareButton.addEventListener("click", async () => {
-        const shareUrl = decodeURIComponent(copyShareButton.dataset.shareUrl);
-        const shareText = decodeURIComponent(copyShareButton.dataset.shareText);
+        const shareUrl = socialShareLinks.shareUrl;
+        const shareText = socialShareLinks.shareText;
 
-        try {
-          if (navigator.share) {
+        if (navigator.share) {
+          try {
             await navigator.share({
               title: name,
               text: shareText,
@@ -674,15 +686,23 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             showMessage("Share dialog opened.", "success");
             return;
-          }
+          } catch (error) {
+            if (error.name === "AbortError") {
+              return;
+            }
 
+            showMessage("Unable to share right now. Please try again.", "error");
+            console.error("Error sharing activity:", error);
+            return;
+          }
+        }
+
+        try {
           await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
           showMessage("Share text copied to clipboard.", "success");
         } catch (error) {
-          if (error.name !== "AbortError") {
-            showMessage("Unable to share right now. Please try again.", "error");
-            console.error("Error sharing activity:", error);
-          }
+          showMessage("Unable to copy share text right now.", "error");
+          console.error("Error copying share text:", error);
         }
       });
     }
