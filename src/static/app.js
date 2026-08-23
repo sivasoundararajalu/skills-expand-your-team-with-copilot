@@ -304,6 +304,34 @@ document.addEventListener("DOMContentLoaded", () => {
     return details.schedule;
   }
 
+  function buildActivityShareText(activityName, details) {
+    return `Check out ${activityName} at Mergington High School! ${formatSchedule(
+      details
+    )}`;
+  }
+
+  function buildActivityShareUrl(activityName) {
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set("activity", activityName);
+    return shareUrl.toString();
+  }
+
+  function buildSocialShareLinks(activityName, details) {
+    const shareText = buildActivityShareText(activityName, details);
+    const shareUrl = buildActivityShareUrl(activityName);
+    const encodedText = encodeURIComponent(shareText);
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedCombined = encodeURIComponent(`${shareText} ${shareUrl}`);
+
+    return {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`,
+      whatsapp: `https://wa.me/?text=${encodedCombined}`,
+      x: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+      shareText,
+      shareUrl,
+    };
+  }
+
   // Function to determine activity type (this would ideally come from backend)
   function getActivityType(activityName, description) {
     const name = activityName.toLowerCase();
@@ -498,6 +526,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
+    const socialShareLinks = buildSocialShareLinks(name, details);
+    const encodedShareText = encodeURIComponent(socialShareLinks.shareText);
+    const encodedShareUrl = encodeURIComponent(socialShareLinks.shareUrl);
 
     // Create activity tag
     const tagHtml = `
@@ -528,6 +559,47 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="tooltip-text">Regular meetings at this time throughout the semester</span>
       </p>
       ${capacityIndicator}
+      <div class="activity-share">
+        <span class="share-label">Share with friends:</span>
+        <div class="share-buttons">
+          <a
+            class="share-button"
+            href="${socialShareLinks.facebook}"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Share ${name} on Facebook"
+          >
+            Facebook
+          </a>
+          <a
+            class="share-button"
+            href="${socialShareLinks.whatsapp}"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Share ${name} on WhatsApp"
+          >
+            WhatsApp
+          </a>
+          <a
+            class="share-button"
+            href="${socialShareLinks.x}"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Share ${name} on X"
+          >
+            X
+          </a>
+          <button
+            type="button"
+            class="share-button copy-share-button"
+            data-share-url="${encodedShareUrl}"
+            data-share-text="${encodedShareText}"
+            aria-label="Copy share text and link for ${name}"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
       <div class="participants-list">
         <h5>Current Participants:</h5>
         <ul>
@@ -585,6 +657,34 @@ document.addEventListener("DOMContentLoaded", () => {
           openRegistrationModal(name);
         });
       }
+    }
+
+    const copyShareButton = activityCard.querySelector(".copy-share-button");
+    if (copyShareButton) {
+      copyShareButton.addEventListener("click", async () => {
+        const shareUrl = decodeURIComponent(copyShareButton.dataset.shareUrl);
+        const shareText = decodeURIComponent(copyShareButton.dataset.shareText);
+
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: name,
+              text: shareText,
+              url: shareUrl,
+            });
+            showMessage("Share dialog opened.", "success");
+            return;
+          }
+
+          await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+          showMessage("Share text copied to clipboard.", "success");
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            showMessage("Unable to share right now. Please try again.", "error");
+            console.error("Error sharing activity:", error);
+          }
+        }
+      });
     }
 
     activitiesList.appendChild(activityCard);

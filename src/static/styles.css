@@ -183,6 +183,41 @@ section h3 {
   line-height: 1.4;
 }
 
+.activity-share {
+  margin-top: 8px;
+}
+
+.share-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  margin-bottom: 6px;
+}
+
+.share-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.share-button {
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  text-decoration: none;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.share-button:hover {
+  background-color: var(--primary-light);
+  border-color: var(--primary-light);
+  color: white;
+}
+
 .activity-card-actions {
   margin-top: auto;
   padding-top: 10px;
